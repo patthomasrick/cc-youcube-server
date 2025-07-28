@@ -10,6 +10,8 @@ ARG SANJUUNI_SHA512SUM="22c85f9a5c16c0acb4dde971b64f53e765a8d607065e7a2511510392
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && update-ca-certificates
+
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
