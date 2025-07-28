@@ -24,7 +24,7 @@ RUN set -eux; \
   tar --extract --directory sanjuuni --strip-components=1 --file=sanjuuni.tar.gz
 
 RUN set -eux; \
-  apt-get upgrade -y \
+  apt-get upgrade -y && \
   rm -rf /var/lib/apt/lists/*
 
 WORKDIR /sanjuuni
