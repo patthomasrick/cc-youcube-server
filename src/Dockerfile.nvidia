@@ -1,6 +1,6 @@
 #!/usr/bin/env dockerfile-shebang
 
-FROM ghcr.io/commandcracker/ubuntu-ffmpeg:latest AS ffmpeg
+FROM ghcr.io/jrottenberg/ffmpeg:7-ubuntu AS ffmpeg
 
 FROM ffmpeg AS sanjuuni
 
