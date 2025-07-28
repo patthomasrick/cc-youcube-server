@@ -50,16 +50,12 @@ SANJUUNI_PATH = getenv("SANJUUNI_PATH", "sanjuuni")
 DISABLE_OPENCL = bool(getenv("DISABLE_OPENCL"))
 
 
-def download_video(
-    temp_dir: str, media_id: str, resp: Websocket, loop, width: int, height: int
-):
+def download_video(temp_dir: str, media_id: str, resp: Websocket, loop, width: int, height: int):
     """
     Converts the downloaded video to 32vid
     """
     run_coroutine_threadsafe(
-        resp.send(
-            dumps({"action": "status", "message": "Converting video to 32vid ..."})
-        ),
+        resp.send(dumps({"action": "status", "message": "Converting video to 32vid ..."})),
         loop,
     )
 
@@ -70,9 +66,7 @@ def download_video(
 
     def handler(line):
         logger.debug("%s%s", prefix, line)
-        run_coroutine_threadsafe(
-            resp.send(dumps({"action": "status", "message": line})), loop
-        )
+        run_coroutine_threadsafe(resp.send(dumps({"action": "status", "message": line})), loop)
 
     returncode = run_with_live_output(
         [
@@ -102,9 +96,7 @@ def download_audio(temp_dir: str, media_id: str, resp: Websocket, loop):
     Converts the downloaded audio to dfpwm
     """
     run_coroutine_threadsafe(
-        resp.send(
-            dumps({"action": "status", "message": "Converting audio to dfpwm ..."})
-        ),
+        resp.send(dumps({"action": "status", "message": "Converting audio to dfpwm ..."})),
         loop,
     )
 
@@ -168,8 +160,7 @@ def download(
                         {
                             "action": "status",
                             "message": remove_ansi_escape_codes(
-                                f"download {remove_whitespace(info.get('_percent_str'))} "
-                                f"ETA {info.get('_eta_str')}"
+                                f"download {remove_whitespace(info.get('_percent_str'))} ETA {info.get('_eta_str')}"
                             ),
                         }
                     )
@@ -187,16 +178,13 @@ def download(
             "extract_flat": "in_playlist",
             "progress_hooks": [my_hook],
             "logger": YTDLPLogger(),
+            "no_check_certificate": True,  # TEMP
         }
 
         yt_dl = YoutubeDL(yt_dl_options)
 
         run_coroutine_threadsafe(
-            resp.send(
-                dumps(
-                    {"action": "status", "message": "Getting resource information ..."}
-                )
-            ),
+            resp.send(dumps({"action": "status", "message": "Getting resource information ..."})),
             loop,
         )
 
@@ -235,9 +223,7 @@ def download(
         the video is extracted flat,
         so we need to get missing information by running the extractor again.
         """
-        if data.get("extractor") == "youtube" and (
-            data.get("view_count") is None or data.get("like_count") is None
-        ):
+        if data.get("extractor") == "youtube" and (data.get("view_count") is None or data.get("like_count") is None):
             data = yt_dl.extract_info(data.get("id"), download=False)
 
         media_id = data.get("id")
@@ -252,9 +238,7 @@ def download(
 
         if not audio_downloaded or (not video_downloaded and is_video):
             run_coroutine_threadsafe(
-                resp.send(
-                    dumps({"action": "status", "message": "Downloading resource ..."})
-                ),
+                resp.send(dumps({"action": "status", "message": "Downloading resource ..."})),
                 loop,
             )
 
