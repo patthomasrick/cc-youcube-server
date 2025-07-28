@@ -41,8 +41,8 @@ jobs:
           context: src
           push: true
           tags: >
-            ${{ env.REGISTRY }}/patthomasrick/youcube:latest,${{ env.REGISTRY
-            }}/patthomasrick/youcube:alpine
+            ${{ env.REGISTRY }}/patthomasrick/youcube:pt-latest,${{ env.REGISTRY
+            }}/patthomasrick/youcube:pt-alpine
           labels: ${{ steps.meta.outputs.labels }}
 
   build-and-publish-nvidia:
@@ -74,5 +74,5 @@ jobs:
           file: src/Dockerfile.nvidia
           context: src
           push: true
-          tags: ${{ env.REGISTRY }}/patthomasrick/youcube:ubuntu-nvidia
+          tags: ${{ env.REGISTRY }}/patthomasrick/youcube:pt-ubuntu-nvidia
           labels: ${{ steps.meta.outputs.labels }}
