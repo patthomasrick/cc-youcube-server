@@ -17,7 +17,6 @@ RUN set -eux; \
   apt-get install -y --no-install-recommends \
   ocl-icd-opencl-dev \
   wget \
-  curl \
   clang \
   make \
   libpoco-dev; \
@@ -49,6 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
+  curl \
   libpoco-dev \
   python3-pip \
   ocl-icd-libopencl1; \
@@ -57,10 +57,6 @@ RUN set -eux; \
   chown 1000:1000 /youcube/; \
   mkdir -p /etc/OpenCL/vendors; \
   echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
-
-RUN set -eux; \
-  apt-get upgrade -y && \
-  rm -rf /var/lib/apt/lists/*
 
 ENV \
   NVIDIA_VISIBLE_DEVICES=all \

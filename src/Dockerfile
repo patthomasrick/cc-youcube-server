@@ -8,6 +8,8 @@ ARG SANJUUNI_SHA512SUM="22c85f9a5c16c0acb4dde971b64f53e765a8d607065e7a2511510392
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
+RUN apk add --upgrade --no-cache ca-certificates && update-ca-certificates
+
 RUN set -eux; \
   apk add --no-cache --update \
   g++ \
@@ -36,6 +38,8 @@ WORKDIR /
 COPY requirements.txt .
 COPY youcube ./youcube
 COPY compile.py .
+
+RUN apk add --upgrade --no-cache ca-certificates && update-ca-certificates
 
 RUN set -eux; \
   apk add --no-cache --update build-base; \
