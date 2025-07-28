@@ -10,8 +10,6 @@ ARG SANJUUNI_SHA512SUM="22c85f9a5c16c0acb4dde971b64f53e765a8d607065e7a2511510392
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN update-ca-certificates --fresh --insecure
-
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
@@ -25,11 +23,6 @@ RUN set -eux; \
   echo "${SANJUUNI_SHA512SUM}" | sha512sum -c -; \
   mkdir --parents sanjuuni; \
   tar --extract --directory sanjuuni --strip-components=1 --file=sanjuuni.tar.gz
-
-
-RUN set -eux; \
-  apt-get upgrade -y && \
-  rm -rf /var/lib/apt/lists/*
 
 WORKDIR /sanjuuni
 
@@ -48,6 +41,8 @@ COPY --chown=1000:1000 youcube/*.py /youcube
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && update-ca-certificates
+
 # hadolint ignore=SC1091
 RUN set -eux; \
   apt-get update; \
@@ -60,6 +55,10 @@ RUN set -eux; \
   chown 1000:1000 /youcube/; \
   mkdir -p /etc/OpenCL/vendors; \
   echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+
+RUN set -eux; \
+  apt-get upgrade -y && \
+  rm -rf /var/lib/apt/lists/*
 
 ENV \
   NVIDIA_VISIBLE_DEVICES=all \
