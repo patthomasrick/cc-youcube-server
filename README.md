@@ -5,8 +5,10 @@
 
 ![preview]
 
-YouCube has a some public servers, which you can use if you don't want to host your own server. \
-The client has the public servers set by default, so you can just run the client, and you're good to go. \
+YouCube has a some public servers, which you can use if you don't want to host
+your own server. \
+The client has the public servers set by default, so you can just run the
+client, and you're good to go. \
 Moor Information about the servers can be seen on the [doc].
 
 ## Requirements
@@ -63,7 +65,6 @@ services:
     hostname: youcube
     ports:
       - 5000:5000
-...
 ```
 
 [spotify application]: https://developer.spotify.com/dashboard/applications
@@ -78,6 +79,9 @@ services:
 [spotipy]: https://pypi.org/project/spotipy
 [doc]: https://youcube.madefor.cc/api
 [preview]: .README/preview-server.png
-[Python Version: 3.7+]: https://img.shields.io/badge/Python-3.7+-green?style=for-the-badge&logo=Python&logoColor=white
-[Python Lint Workflow Status]: https://img.shields.io/github/actions/workflow/status/CC-YouCube/server/pylint.yml?branch=main&label=Python%20Lint&logo=github&style=for-the-badge
-[Sanic Builtin values]: https://sanic.dev/en/guide/running/configuration.md#builtin-values
+[Python Version: 3.7+]:
+  https://img.shields.io/badge/Python-3.7+-green?style=for-the-badge&logo=Python&logoColor=white
+[Python Lint Workflow Status]:
+  https://img.shields.io/github/actions/workflow/status/CC-YouCube/server/pylint.yml?branch=main&label=Python%20Lint&logo=github&style=for-the-badge
+[Sanic Builtin values]:
+  https://sanic.dev/en/guide/running/configuration.md#builtin-values
