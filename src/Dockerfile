@@ -20,6 +20,9 @@ RUN set -eux; \
   tar --extract --directory sanjuuni --strip-components=1 --file=sanjuuni.tar.gz; \
   rm sanjuuni.tar.gz;
 
+RUN set -eux; \
+  apk upgrade --no-cache --update
+
 WORKDIR /sanjuuni
 
 RUN set -eux; \
