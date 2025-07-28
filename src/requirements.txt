@@ -1,5 +1,6 @@
-sanic~=25.3.0
-#uvloop~=0.21.0; platform_system != "Windows"
-yt-dlp
 #orjson~=3.10.18
+#uvloop~=0.21.0; platform_system != "Windows"
+certifi
+sanic~=25.3.0
 spotipy~=2.25.1
+yt-dlp
