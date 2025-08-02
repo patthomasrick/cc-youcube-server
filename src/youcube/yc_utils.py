@@ -67,11 +67,15 @@ DATA_FOLDER = join(dirname(abspath(__file__)), "data")
 
 def get_video_name(media_id: str, width: int, height: int) -> str:
     """Returns the file name of the requested video"""
+    if not isinstance(media_id, str):
+        return ""
     return f"{media_id}({width}x{height}).{VIDEO_FORMAT}"
 
 
 def get_audio_name(media_id: str) -> str:
     """Returns the file name of the requested audio"""
+    if not isinstance(media_id, str):
+        return ""
     return f"{media_id}.{AUDIO_FORMAT}"
 
 
@@ -85,7 +89,7 @@ def get_audio_path(media_id: str) -> str:
     return join(DATA_FOLDER, get_audio_name(media_id))
 
 
-def create_data_folder_if_not_present():
+def create_data_folder_if_not_present() -> None:
     """Creates the data folder if it does not exist"""
     if not exists(DATA_FOLDER):
         mkdir(DATA_FOLDER)
@@ -93,11 +97,15 @@ def create_data_folder_if_not_present():
 
 def is_audio_already_downloaded(media_id: str) -> bool:
     """Returns True if the given audio is already downloaded"""
+    if not isinstance(media_id, str):
+        return False
     return exists(get_audio_path(media_id))
 
 
 def is_video_already_downloaded(media_id: str, width: int, height: int) -> bool:
     """Returns True if the given video is already downloaded"""
+    if not isinstance(media_id, str):
+        return False
     return exists(get_video_path(media_id, width, height))
 
 
@@ -107,4 +115,6 @@ allowed_characters = re_compile("^[a-zA-Z0-9-._]*$")
 
 def is_save(string: str) -> bool:
     """Returns True if the given string does not contain special characters"""
+    if not isinstance(string, str):
+        return False
     return bool(allowed_characters.match(string))

@@ -19,7 +19,9 @@ def main() -> None:
         if not isdir(path) and path.name not in blacklist:
             compile_path = py_compile(path, optimize=2)
             new_name = Path(
-                join(Path(compile_path).parent, path.name.replace(".py", ".pyc"))
+                join(
+                    Path(compile_path).parent, path.name.replace(".py", ".pyc")
+                )
             )
             rename(compile_path, new_name)
             print(path, "->", new_name)

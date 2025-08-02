@@ -5,21 +5,15 @@
 Spotify support module
 """
 
-
 # Built-in modules
 from enum import Enum
 from logging import getLogger
 from os import getenv
 from re import match as re_match
-from typing import Union
+from typing import Any, Dict, List, Optional
 
-# pip modules
 from spotipy import MemoryCacheHandler, SpotifyClientCredentials
 from spotipy.client import Spotify
-
-
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
 
 
 class SpotifyTypes(Enum):
@@ -32,74 +26,101 @@ class SpotifyTypes(Enum):
     USER = "user"
 
 
+def _dict_or_throw(obj: Optional[Any]) -> Dict[str, Any]:
+    if isinstance(obj, dict):
+        return obj
+    raise TypeError(f"Expected a dictionary, got {type(obj).__name__}")
+
+
 class SpotifyURLProcessor:
-    def __init__(self, spotify: Spotify = None, spotify_market: str = "US") -> None:
-        self.spotify = spotify
-        self.spotify_market = spotify_market
+    def __init__(
+        self, spotify: Optional[Spotify] = None, spotify_market: str = "US"
+    ) -> None:
+        self.spotify: Optional[Spotify] = spotify
+        self.spotify_market: str = spotify_market
 
     def spotify_track(self, spotify_id: str) -> str:
-        track: dict = self.spotify.track(spotify_id)
-
-        artists = track["artists"][0]["name"]
-        name = track["name"]
-
+        if self.spotify is None:
+            return ""
+        track: Dict[str, Any] = _dict_or_throw(self.spotify.track(spotify_id))
+        artists: str = track["artists"][0]["name"]
+        name: str = track["name"]
         return f"{artists} - {name}"
 
-    def spotify_playlist(self, spotify_id: str) -> list:
-        playlist_tracks = self.spotify.playlist_items(spotify_id)
-        playlist = []
+    def spotify_playlist(self, spotify_id: str) -> List[Optional[str]]:
+        if self.spotify is None:
+            return []
+        playlist_tracks: Dict[str, Any] = _dict_or_throw(
+            self.spotify.playlist_items(spotify_id)
+        )
+        playlist: List[Optional[str]] = []
         for item in playlist_tracks["items"]:
             track = item.get("track")
             if track:
                 playlist.append(track.get("uri"))
-
         return playlist
 
-    def spotify_album_tracks(self, spotify_id: str) -> list:
-        album_tracks = self.spotify.album_tracks(spotify_id)
-        playlist = []
-
+    def spotify_album_tracks(self, spotify_id: str) -> List[Optional[str]]:
+        if self.spotify is None:
+            return []
+        album_tracks: Dict[str, Any] = _dict_or_throw(
+            self.spotify.album_tracks(spotify_id)
+        )
+        playlist: List[Optional[str]] = []
         for track in album_tracks["items"]:
             playlist.append(track.get("uri"))
-
         return playlist
 
-    def spotify_artist(self, spotify_id: str) -> list:
-        top_tracks = self.spotify.artist_top_tracks(spotify_id)
-        playlist = []
-
+    def spotify_artist(self, spotify_id: str) -> List[Optional[str]]:
+        if self.spotify is None:
+            return []
+        top_tracks: Dict[str, Any] = _dict_or_throw(
+            self.spotify.artist_top_tracks(spotify_id)
+        )
+        playlist: List[Optional[str]] = []
         for track in top_tracks["tracks"]:
             playlist.append(track.get("uri"))
-
         return playlist
 
-    def spotify_show(self, spotify_id: str) -> list:
-        episodes = self.spotify.show_episodes(spotify_id, market=self.spotify_market)
-        playlist = []
-
+    def spotify_show(self, spotify_id: str) -> List[Optional[str]]:
+        if self.spotify is None:
+            return []
+        episodes: Dict[str, Any] = _dict_or_throw(
+            self.spotify.show_episodes(spotify_id, market=self.spotify_market)
+        )
+        playlist: List[Optional[str]] = []
         for track in episodes["items"]:
             playlist.append(track.get("uri"))
-
         return playlist
 
     def spotify_episode(self, spotify_id: str) -> str:
-        episode = self.spotify.episode(spotify_id, market=self.spotify_market)
-
-        publisher = episode.get("show").get("publisher")
-        name = episode.get("show").get("name")
-        episode_name = episode.get("name")
-
+        if self.spotify is None:
+            return ""
+        episode: Dict[str, Any] = _dict_or_throw(
+            self.spotify.episode(spotify_id, market=self.spotify_market)
+        )
+        publisher: str = str(episode.get("show", {}).get("publisher"))
+        name: str = str(episode.get("show", {}).get("name"))
+        episode_name: str = str(episode.get("name"))
         return f"{publisher} - {name} - {episode_name}"
 
-    def spotify_user(self, spotify_id: str) -> list:
+    def spotify_user(self, spotify_id: str) -> List[Optional[str]]:
         """
         Get first playlist of user and return all items
         """
-        playlists = self.spotify.user_playlists(spotify_id)
-        return self.spotify_playlist(playlists.get("items")[0].get("id"))
+        if self.spotify is None:
+            return []
+        playlists: Dict[str, Any] = _dict_or_throw(
+            self.spotify.user_playlists(spotify_id)
+        )
+        items = playlists.get("items")
+        if items and isinstance(items, list) and len(items) > 0:
+            first_id = items[0].get("id")
+            if first_id:
+                return self.spotify_playlist(first_id)
+        return []
 
-    # pylint: disable-next=inconsistent-return-statements
-    def auto(self, url: str) -> Union[str, list]:
+    def auto(self, url: str) -> Optional[Any]:
         type_function_map = {
             SpotifyTypes.ALBUM: self.spotify_album_tracks,
             SpotifyTypes.TRACK: self.spotify_track,
@@ -110,12 +131,10 @@ class SpotifyURLProcessor:
             SpotifyTypes.USER: self.spotify_user,
         }
 
-        # pylint: disable=protected-access
         for match in [
             re_match(Spotify._regex_spotify_uri, url),
             re_match(Spotify._regex_spotify_url, url),
         ]:
-            # pylint: enable=protected-access
             if match:
                 group = match.groupdict()
 
@@ -131,9 +150,9 @@ def main() -> None:
     logger = getLogger(__name__)
 
     # Spotify
-    spotify_client_id = getenv("SPOTIPY_CLIENT_ID")
-    spotify_client_secret = getenv("SPOTIPY_CLIENT_SECRET")
-    spotipy = None
+    spotify_client_id: Optional[str] = getenv("SPOTIPY_CLIENT_ID")
+    spotify_client_secret: Optional[str] = getenv("SPOTIPY_CLIENT_SECRET")
+    spotipy: Optional[Spotify] = None
 
     if spotify_client_id and spotify_client_secret:
         logger.info("Spotipy Enabled")
@@ -148,7 +167,7 @@ def main() -> None:
         logger.info("Spotipy Disabled")
     spotify_url_processor = SpotifyURLProcessor(spotipy)
 
-    test_urls = [
+    test_urls: List[str] = [
         "https://open.spotify.com/album/2Kh43m04B1UkVcpcRa1Zug",
         "https://42",
         "https://open.spotify.com/playlist/1Ze30K0U9OYtQZsQS1vIPj",
@@ -159,11 +178,13 @@ def main() -> None:
         "https://open.spotify.com/playlist/5UrcnHexRYVEprv5DJBPER",
     ]
 
-    # pylint: disable-next=import-outside-toplevel
     from yc_colours import Foreground
 
     for url in test_urls:
-        print(Foreground.BLUE + url + Foreground.WHITE, spotify_url_processor.auto(url))
+        print(
+            Foreground.BLUE + url + Foreground.WHITE,
+            spotify_url_processor.auto(url),
+        )
 
 
 if __name__ == "__main__":

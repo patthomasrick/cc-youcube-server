@@ -1,4 +1,4 @@
-FROM ghcr.io/commandcracker/ffmpeg:latest AS ffmpeg
+FROM ghcr.io/jrottenberg/ffmpeg:7-alpine AS ffmpeg
 
 FROM ffmpeg AS sanjuuni
 
@@ -8,17 +8,22 @@ ARG SANJUUNI_SHA512SUM="22c85f9a5c16c0acb4dde971b64f53e765a8d607065e7a2511510392
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
+RUN apk add --upgrade --no-cache ca-certificates && update-ca-certificates
 RUN set -eux; \
   apk add --no-cache --update \
   g++ \
   zlib-dev \
   poco-dev \
-  make; \
+  make \
+  ffmpeg-dev; \
   wget -q --output-document=sanjuuni.tar.gz https://github.com/MCJack123/sanjuuni/archive/${SANJUUNI_VERSION}.tar.gz; \
   echo "${SANJUUNI_SHA512SUM}" | sha512sum -c -; \
   mkdir --parents sanjuuni; \
   tar --extract --directory sanjuuni --strip-components=1 --file=sanjuuni.tar.gz; \
   rm sanjuuni.tar.gz;
+
+RUN set -eux; \
+  apk upgrade --no-cache --update
 
 WORKDIR /sanjuuni
 
@@ -33,6 +38,8 @@ WORKDIR /
 COPY requirements.txt .
 COPY youcube ./youcube
 COPY compile.py .
+
+RUN apk add --upgrade --no-cache ca-certificates && update-ca-certificates
 
 RUN set -eux; \
   apk add --no-cache --update build-base; \

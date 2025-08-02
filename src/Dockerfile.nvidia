@@ -1,6 +1,6 @@
 #!/usr/bin/env dockerfile-shebang
 
-FROM ghcr.io/commandcracker/ubuntu-ffmpeg:latest AS ffmpeg
+FROM ghcr.io/jrottenberg/ffmpeg:7-ubuntu AS ffmpeg
 
 FROM ffmpeg AS sanjuuni
 
@@ -9,6 +9,8 @@ ENV SANJUUNI_VERSION=49cb275d4ef64d2bee3d5d2cbc5baf47787bedc2
 ARG SANJUUNI_SHA512SUM="22c85f9a5c16c0acb4dde971b64f53e765a8d607065e7a25115103925124e33a0680da3790e85c4343b7d320a0170b6ae096ec7f2b48b22582cf96681fd3a78c *sanjuuni.tar.gz"
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && update-ca-certificates
 
 RUN set -eux; \
   apt-get update; \
@@ -40,10 +42,16 @@ COPY --chown=1000:1000 youcube/*.py /youcube
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# Update CA certificates
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends ca-certificates && \
+  update-ca-certificates
+
 # hadolint ignore=SC1091
 RUN set -eux; \
   apt-get update; \
   apt-get install -y --no-install-recommends \
+  curl \
   libpoco-dev \
   python3-pip \
   ocl-icd-libopencl1; \

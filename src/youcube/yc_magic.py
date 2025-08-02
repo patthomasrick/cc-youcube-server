@@ -5,13 +5,12 @@
 Black Magic with threads, asyncio and subprocesses
 """
 
-# Built-in modules
 from asyncio import Event
 from subprocess import PIPE, Popen
 from sys import settrace
 from threading import Thread
 from types import FrameType
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 
 class ThreadSaveAsyncioEventWithReturnValue(Event):
@@ -21,19 +20,21 @@ class ThreadSaveAsyncioEventWithReturnValue(Event):
 
     def __init__(self) -> None:
         super().__init__()
-        self.result = None
+        self.result: Any = None
 
-    # pylint: disable-next=fixme
     # TODO: clear() method
 
-    def set(self):
-        # pylint: disable-next=fixme
+    def set(self) -> None:
         # FIXME: The _loop attribute is not documented as public api!
-        self._loop.call_soon_threadsafe(super().set)
+        loop = getattr(self, "_loop", None)
+        if loop is not None:
+            loop.call_soon_threadsafe(super().set)
 
 
 def run_with_thread_save_asyncio_event_with_return_value(
-    event: ThreadSaveAsyncioEventWithReturnValue, func: Callable[[], Any], *args
+    event: ThreadSaveAsyncioEventWithReturnValue,
+    func: Callable[..., Any],
+    *args: Any,
 ) -> None:
     """
     Runs a function and calls a ThreadSaveAsyncioEventWithReturnValue
@@ -45,8 +46,8 @@ def run_with_thread_save_asyncio_event_with_return_value(
 
 
 async def run_function_in_thread_from_async_function(
-    func: Callable[[], Any], *args
-) -> object:
+    func: Callable[..., Any], *args: Any
+) -> Any:
     """
     Runs a function in a thread from an async function
     """
@@ -65,12 +66,11 @@ class KillableThread(Thread):
     https://www.geeksforgeeks.org/python-different-ways-to-kill-a-thread/
     """
 
-    def __init__(self, *args, **keywords) -> None:
+    def __init__(self, *args: Any, **keywords: Any) -> None:
         Thread.__init__(self, *args, **keywords)
-        self.killed = False
+        self.killed: bool = False
 
     def start(self) -> None:
-        # pylint: disable-next=attribute-defined-outside-init
         self.__run_backup = self.run
         self.run = self.__run
         Thread.start(self)
@@ -80,8 +80,7 @@ class KillableThread(Thread):
         self.__run_backup()
         self.run = self.__run_backup
 
-    # pylint: disable-next=unused-argument
-    def globaltrace(self, frame: FrameType, event: str, arg: Any) -> None:
+    def globaltrace(self, frame: FrameType, event: str, arg: Any) -> Any:
         """
         Allows calling "localtrace" from global
         """
@@ -89,8 +88,7 @@ class KillableThread(Thread):
             return self.localtrace
         return None
 
-    # pylint: disable-next=unused-argument
-    def localtrace(self, frame: FrameType, event: str, arg: Any) -> None:
+    def localtrace(self, frame: FrameType, event: str, arg: Any) -> Any:
         """
         Uses trace to check if the Thread needs to be killed
         """
@@ -103,17 +101,20 @@ class KillableThread(Thread):
         self.killed = True
 
 
-def run_with_live_output(cmd: list, handler: Callable[[str], None]) -> int:
+def run_with_live_output(cmd: List[str], handler: Callable[[str], None]) -> int:
     """
     Runs a subprocess and allows handling output live
     """
     with Popen(cmd, stdout=PIPE, stderr=PIPE) as process:
 
-        def live_output():
-            line = []
+        def live_output() -> None:
+            line: List[str] = []
             while True:
-                read = process.stderr.read(1)
-                if read in (b"\r", b"\n"):  # handle \n and \r as new line characters
+                read = process.stderr.read(1) if process.stderr else b""
+                if read in (
+                    b"\r",
+                    b"\n",
+                ):  # handle \n and \r as new line characters
                     if len(line) != 0:  # ignore empty line
                         handler("".join(line))
                         line.clear()
@@ -127,6 +128,3 @@ def run_with_live_output(cmd: list, handler: Callable[[str], None]) -> int:
         thread.kill()
 
         return process.returncode
-
-
-# pylint: disable=unused-argument

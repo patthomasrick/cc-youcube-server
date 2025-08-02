@@ -1,13 +1,44 @@
 #!make
 
+VERSION=0.0.1
+DATETIME=$(shell date +%Y%m%d%H%M%S)
+
 run:
 	python src/youcube/youcube.py
 
-docker-build:
-	docker build -t youcube:latest src/.
+docker: docker-buildx docker-buildx-nvidia
 
+docker-buildx:
+	docker buildx build --platform linux/amd64,linux/arm64 \
+		-t youcube:latest \
+		-t youcube:$(VERSION) \
+		-t youcube:$(DATETIME) \
+		src/.
+
+docker-buildx-nvidia:
+	docker buildx build --platform linux/amd64,linux/arm64 \
+		-t youcube:nvidia \
+		-t youcube:nvidia-$(VERSION) \
+		-t youcube:nvidia-$(DATETIME) \
+		src/. \
+		--file src/Dockerfile.nvidia
+
+# Legacy
+docker-build:
+	docker build --platform linux/amd64 \
+		-t youcube:latest \
+		-t youcube:$(VERSION) \
+		-t youcube:$(DATETIME) \
+		src/.
+
+# Legacy
 docker-build-nvidia:
-	docker build -t youcube:nvidia src/. --file src/Dockerfile.nvidia
+	docker build --platform linux/amd64 \
+		-t youcube:nvidia \
+		-t youcube:nvidia-$(VERSION) \
+		-t youcube:nvidia-$(DATETIME) \
+		src/. \
+		--file src/Dockerfile.nvidia
 
 pylint:
 	pylint src/youcube/*.py

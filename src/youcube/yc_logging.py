@@ -19,8 +19,8 @@ from logging import (
     getLogger,
 )
 from os import getenv
+from typing import Optional
 
-# local modules
 from yc_colours import RESET, Foreground
 
 LOGLEVEL = getenv("LOGLEVEL") or DEBUG
@@ -33,11 +33,15 @@ class ColordFormatter(Formatter):
     """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
 
     # noinspection SpellCheckingInspection
-    def __init__(self, fmt=None, datefmt="%H:%M:%S") -> None:
+    def __init__(self, fmt: Optional[str], datefmt: str = "%H:%M:%S") -> None:
         super().__init__()
-        self.fmt = fmt
+        self.fmt: str = (
+            fmt
+            if fmt is not None
+            else "[%(asctime)s %(levelname)s] [YouCube] %(message)s"
+        )
         self.datefmt = datefmt
-        self.formats = {
+        self.formats: dict = {
             DEBUG: f"{Foreground.BRIGHT_BLACK}{self.fmt}{RESET}",
             INFO: f"{Foreground.BRIGHT_WHITE}{self.fmt}{RESET}",
             WARNING: f"{Foreground.BRIGHT_YELLOW}{self.fmt}{RESET}",
@@ -47,7 +51,9 @@ class ColordFormatter(Formatter):
 
     def format(self, record: LogRecord) -> str:
         log_fmt = self.formats.get(record.levelno)
-        formatter = Formatter(log_fmt, datefmt=self.datefmt)
+        if log_fmt is None:
+            log_fmt = self.fmt
+        formatter: Formatter = Formatter(log_fmt, datefmt=self.datefmt)
         return formatter.format(record)
 
 
@@ -56,9 +62,9 @@ class YTDLPLogger:
 
     def __init__(self) -> None:
         if NO_COLOR:
-            self.prefix = "[yt-dlp] "
+            self.prefix: str = "[yt-dlp] "
         else:
-            self.prefix = f"{Foreground.BRIGHT_MAGENTA}[yt-dlp]{RESET} "
+            self.prefix: str = f"{Foreground.BRIGHT_MAGENTA}[yt-dlp]{RESET} "
 
     def debug(self, msg: str) -> None:
         """Pass msg to the main logger"""
@@ -89,10 +95,11 @@ def setup_logging() -> Logger:
 
     # noinspection SpellCheckingInspection
     if NO_COLOR:
-        formatter = Formatter(fmt="[%(asctime)s %(levelname)s] [YouCube] %(message)s")
+        formatter = Formatter(
+            fmt="[%(asctime)s %(levelname)s] [YouCube] %(message)s"
+        )
     else:
         formatter = ColordFormatter(
-            # pylint: disable-next=line-too-long
             fmt=f"[%(asctime)s %(levelname)s] {Foreground.BRIGHT_WHITE}[You{Foreground.RED}Cube]{RESET} %(message)s"
         )
 

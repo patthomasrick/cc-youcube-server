@@ -8,7 +8,7 @@ version = "1.0.0"
 authors = [{ name = "Commandcracker" }]
 description = "A server which provides a WebSocket API for YouCube clients"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 keywords = ["youtube", "youcube", "computercraft", "minecraft"]
 license = { text = "GPL-3.0" }
 classifiers = [
@@ -38,3 +38,7 @@ include = [
 
 [tool.autopep8]
 ignore = "E701"
+
+[tool.ruff]
+indent-width = 4
+line-length = 80

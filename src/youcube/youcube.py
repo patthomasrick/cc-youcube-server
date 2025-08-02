@@ -5,33 +5,19 @@
 YouCube Server
 """
 
-# built-in modules
 from asyncio import get_event_loop
 from base64 import b64encode
 from datetime import datetime
+from json import dumps
+from json import loads as load_json
+from json.decoder import JSONDecodeError
 from multiprocessing import Manager
 from os import getenv, remove
 from os.path import exists, join
 from shutil import which
 from time import sleep
-from typing import Any, List, Tuple, Type, Union
+from typing import Any, Dict, List, Tuple, Type, Union
 
-# optional pip module
-try:
-    from orjson import JSONDecodeError, dumps
-    from orjson import loads as load_json
-except ModuleNotFoundError:
-    from json import dumps
-    from json import loads as load_json
-    from json.decoder import JSONDecodeError
-
-try:
-    from types import UnionType
-except ImportError:
-    UnionType = Union[int, str]
-
-
-# pip modules
 from sanic import Request, Sanic, Websocket
 from sanic.compat import open_async
 from sanic.exceptions import SanicException
@@ -39,14 +25,17 @@ from sanic.handlers import ErrorHandler
 from sanic.response import raw, text
 from spotipy import MemoryCacheHandler, SpotifyClientCredentials
 from spotipy.client import Spotify
-
-# local modules
 from yc_colours import RESET, Foreground
 from yc_download import DATA_FOLDER, FFMPEG_PATH, SANJUUNI_PATH, download
 from yc_logging import NO_COLOR, setup_logging
 from yc_magic import run_function_in_thread_from_async_function
 from yc_spotify import SpotifyURLProcessor
-from yc_utils import cap_width_and_height, get_audio_name, get_video_name, is_save
+from yc_utils import (
+    cap_width_and_height,
+    get_audio_name,
+    get_video_name,
+    is_save,
+)
 
 VERSION = "0.0.0-poc.1.0.2"
 API_VERSION = "0.0.0-poc.1.0.0"  # https://commandcracker.github.io/YouCube/
@@ -66,10 +55,6 @@ CHUNKS_AT_ONCE = CHUNK_SIZE * 256
 
 FRAMES_AT_ONCE = 10
 
-# pylint settings
-# pylint: disable=pointless-string-statement
-# pylint: disable=fixme
-# pylint: disable=multiple-statements
 
 """
 Ubuntu nvida support fix and maby alpine support ?
@@ -136,7 +121,7 @@ async def get_vid(vid_file: str, tracker: int) -> List[str]:
     """Returns given line of 32vid file"""
     async with await open_async(file=vid_file, mode="r", encoding="utf-8") as file:
         await file.seek(tracker)
-        lines = []
+        lines: List[str] = []
         for _unused in range(FRAMES_AT_ONCE):
             lines.append((await file.readline())[:-1])  # remove \n
 
@@ -150,31 +135,27 @@ async def getchunk(media_file: str, chunkindex: int) -> bytes:
         return await file.read(CHUNKS_AT_ONCE)
 
 
-# pylint: enable=redefined-outer-name
-
-
 def assert_resp(
     __obj_name: str,
     __obj: Any,
-    __class_or_tuple: Union[
-        Type, UnionType, Tuple[Union[Type, UnionType, Tuple[Any, ...]], ...]
-    ],
+    __class_or_tuple: Union[Type, Tuple[Union[Type, Tuple[Any, ...]], ...]],
 ) -> Union[dict, None]:
     """
     "assert" / isinstance that returns a dict that can be send as a ws response
     """
     if not isinstance(__obj, __class_or_tuple):
+        # Try to get a readable name for the type
+        type_name = getattr(__class_or_tuple, "__name__", str(__class_or_tuple))
         return {
             "action": "error",
-            "message": f"{__obj_name} must be a {__class_or_tuple.__name__}",
+            "message": f"{__obj_name} must be a {type_name}",
         }
     return None
 
 
-# pylint: disable=duplicate-code
 spotify_client_id = getenv("SPOTIPY_CLIENT_ID")
 spotify_client_secret = getenv("SPOTIPY_CLIENT_SECRET")
-# pylint: disable-next=invalid-name
+
 spotipy = None
 
 if spotify_client_id and spotify_client_secret:
@@ -186,12 +167,10 @@ if spotify_client_id and spotify_client_secret:
         )
     )
 
-# pylint: disable-next=invalid-name
+
 spotify_url_processor = None
 if spotipy:
     spotify_url_processor = SpotifyURLProcessor(spotipy)
-
-# pylint: enable=duplicate-code
 
 
 class Actions:
@@ -200,14 +179,13 @@ class Actions:
     Every action needs to be called with a message and needs to return a dict response
     """
 
-    # pylint: disable=missing-function-docstring
-
     @staticmethod
-    async def request_media(message: dict, resp: Websocket, request: Request):
+    async def request_media(message: dict, resp: Websocket, request: Request) -> Dict[str, Any]:
         loop = get_event_loop()
         # get "url"
         url = message.get("url")
-        if error := assert_resp("url", url, str):
+        error = assert_resp("url", url, str)
+        if error:
             return error
         # TODO: assert_resp width and height
         out, files = await run_function_in_thread_from_async_function(
@@ -224,65 +202,88 @@ class Actions:
         return out
 
     @staticmethod
-    async def get_chunk(message: dict, _unused, request: Request):
+    async def get_chunk(message: dict, _unused: Any, request: Request) -> dict:
         # get "chunkindex"
         chunkindex = message.get("chunkindex")
-        if error := assert_resp("chunkindex", chunkindex, int):
+        error = assert_resp("chunkindex", chunkindex, int)
+        if error:
             return error
 
         # get "id"
         media_id = message.get("id")
-        if error := assert_resp("media_id", media_id, str):
+        error = assert_resp("id", media_id, str)
+        if error:
             return error
 
-        if is_save(media_id):
-            file_name = get_audio_name(message.get("id"))
+        if isinstance(media_id, str) and is_save(media_id):
+            file_name = get_audio_name(media_id)
             file = join(DATA_FOLDER, file_name)
 
             request.app.shared_ctx.data[file_name] = datetime.now()
-            chunk = await getchunk(file, chunkindex)
+            if isinstance(chunkindex, int):
+                chunk = await getchunk(file, chunkindex)
+                return {
+                    "action": "chunk",
+                    "chunk": b64encode(chunk).decode("ascii"),
+                }
+            else:
+                return {"action": "error", "message": "Invalid chunk index"}
 
-            return {"action": "chunk", "chunk": b64encode(chunk).decode("ascii")}
         logger.warning("User tried to use special Characters")
-        return {"action": "error", "message": "You dare not use special Characters"}
+        return {
+            "action": "error",
+            "message": "You dare not use special Characters",
+        }
 
     @staticmethod
-    async def get_vid(message: dict, _unused, request: Request):
+    async def get_vid(message: dict, _unused: Any, request: Request) -> Dict[str, Any]:
         # get "line"
         tracker = message.get("tracker")
-        if error := assert_resp("tracker", tracker, int):
+        error = assert_resp("tracker", tracker, int)
+        if error:
             return error
 
         # get "id"
         media_id = message.get("id")
-        if error := assert_resp("id", media_id, str):
+        error = assert_resp("id", media_id, str)
+        if error:
             return error
 
         # get "width"
         width = message.get("width")
-        if error := assert_resp("width", width, int):
+        error = assert_resp("width", width, int)
+        if error:
             return error
 
         # get "height"
         height = message.get("height")
-        if error := assert_resp("height", height, int):
+        error = assert_resp("height", height, int)
+        if error:
             return error
 
         # cap height and width
-        width, height = cap_width_and_height(width, height)
+        if isinstance(width, int) and isinstance(height, int):
+            width, height = cap_width_and_height(width, height)
+        else:
+            return {"action": "error", "message": "Invalid width or height"}
 
-        if is_save(media_id):
-            file_name = get_video_name(message.get("id"), width, height)
+        if isinstance(media_id, str) and is_save(media_id):
+            file_name = get_video_name(media_id, width, height)
             file = join(DATA_FOLDER, file_name)
 
             request.app.shared_ctx.data[file_name] = datetime.now()
 
-            return {"action": "vid", "lines": await get_vid(file, tracker)}
-
-        return {"action": "error", "message": "You dare not use special Characters"}
+            if isinstance(tracker, int):
+                return {"action": "vid", "lines": await get_vid(file, tracker)}
+            else:
+                return {"action": "error", "message": "Invalid tracker"}
+        return {
+            "action": "error",
+            "message": "You dare not use special Characters",
+        }
 
     @staticmethod
-    async def handshake(*_unused):
+    async def handshake(*_unused: Any) -> Dict[str, Any]:
         return {
             "action": "handshake",
             "server": {"version": VERSION},
@@ -290,13 +291,11 @@ class Actions:
             "capabilities": {"video": ["32vid"], "audio": ["dfpwm"]},
         }
 
-    # pylint: enable=missing-function-docstring
-
 
 class CustomErrorHandler(ErrorHandler):
     """Error handler for sanic"""
 
-    def default(self, request: Request, exception: Union[SanicException, Exception]):
+    def default(self, request: Request, exception: Union[SanicException, Exception]) -> Any:
         """handles errors that have no error handlers assigned"""
 
         if isinstance(exception, SanicException) and exception.status_code == 426:
@@ -330,7 +329,7 @@ DATA_CACHE_CLEANUP_INTERVAL = int(getenv("DATA_CACHE_CLEANUP_INTERVAL", "300"))
 DATA_CACHE_CLEANUP_AFTER = int(getenv("DATA_CACHE_CLEANUP_AFTER", "3600"))
 
 
-def data_cache_cleaner(data: dict):
+def data_cache_cleaner(data: dict) -> None:
     """
     Checks for outdated cache entries every DATA_CACHE_CLEANUP_INTERVAL (default 300) Seconds and
     deletes them if they have not been used for DATA_CACHE_CLEANUP_AFTER (default 3600) Seconds.
@@ -338,10 +337,8 @@ def data_cache_cleaner(data: dict):
     try:
         while True:
             sleep(DATA_CACHE_CLEANUP_INTERVAL)
-            for file_name, last_used in data.items():
-                if (
-                    datetime.now() - last_used
-                ).total_seconds() > DATA_CACHE_CLEANUP_AFTER:
+            for file_name, last_used in list(data.items()):
+                if (datetime.now() - last_used).total_seconds() > DATA_CACHE_CLEANUP_AFTER:
                     file_path = join(DATA_FOLDER, file_name)
                     if exists(file_path):
                         remove(file_path)
@@ -352,18 +349,19 @@ def data_cache_cleaner(data: dict):
         pass
 
 
-# pylint: disable=redefined-outer-name
 @app.main_process_ready
-async def ready(app: Sanic, _):
+async def ready(app: Sanic, _: Any) -> None:
     """See https://sanic.dev/en/guide/basics/listeners.html"""
     if DATA_CACHE_CLEANUP_INTERVAL > 0 and DATA_CACHE_CLEANUP_AFTER > 0:
         app.manager.manage(
-            "Data-Cache-Cleaner", data_cache_cleaner, {"data": app.shared_ctx.data}
+            "Data-Cache-Cleaner",
+            data_cache_cleaner,
+            {"data": app.shared_ctx.data},
         )
 
 
 @app.main_process_start
-async def main_start(app: Sanic):
+async def main_start(app: Sanic) -> None:
     """See https://sanic.dev/en/guide/basics/listeners.html"""
     app.shared_ctx.data = Manager().dict()
 
@@ -380,19 +378,20 @@ async def main_start(app: Sanic):
 
 
 @app.route("/dfpwm/<media_id:str>/<chunkindex:int>")
-async def stream_dfpwm(_request: Request, media_id: str, chunkindex: int):
+async def stream_dfpwm(_request: Request, media_id: str, chunkindex: int) -> Any:
     """WIP HTTP mode"""
     return raw(await getchunk(join(DATA_FOLDER, get_audio_name(media_id)), chunkindex))
 
 
 @app.route("/32vid/<media_id:str>/<width:int>/<height:int>/<tracker:int>")  # , stream=True
-async def stream_32vid(
-    _request: Request, media_id: str, width: int, height: int, tracker: int
-):
+async def stream_32vid(_request: Request, media_id: str, width: int, height: int, tracker: int) -> Any:
     """WIP HTTP mode"""
     return raw(
         "\n".join(
-            await get_vid(join(DATA_FOLDER, get_video_name(media_id, width, height)), tracker)
+            await get_vid(
+                join(DATA_FOLDER, get_video_name(media_id, width, height)),
+                tracker,
+            )
         )
     )
 
@@ -430,12 +429,10 @@ async def stream_32vid(request: Request, id: str, width: int, height: int):
         },
     )
 """
-# pylint: enable=redefined-outer-name
 
 
 @app.websocket("/")
-# pylint: disable-next=invalid-name
-async def wshandler(request: Request, ws: Websocket):
+async def wshandler(request: Request, ws: Websocket) -> None:
     """Handels web-socket requests"""
     if NO_COLOR:
         prefix = f"[{request.client_ip}] "
@@ -447,14 +444,18 @@ async def wshandler(request: Request, ws: Websocket):
     logger.debug("%sMy headers are: %s", prefix, request.headers)
 
     while True:
-        message = await ws.recv()
-        logger.debug("%sMessage: %s", prefix, message)
+        message_str = await ws.recv()
+        logger.debug("%sMessage: %s", prefix, message_str)
+        if not message_str:
+            logger.info("%sDisconnected!", prefix)
+            break
 
         try:
-            message: dict = load_json(message)
+            message: dict = load_json(message_str)
         except JSONDecodeError:
             logger.debug("%sFaild to parse Json", prefix)
             await ws.send(dumps({"action": "error", "message": "Faild to parse Json"}))
+            continue
 
         if message.get("action") in actions:
             response = await actions[message.get("action")](message, ws, request)
@@ -465,9 +466,9 @@ def main() -> None:
     """
     Run all needed services
     """
-    port = int(getenv("PORT", "5000"))
-    host = getenv("HOST", "127.0.0.1")
-    fast = not getenv("NO_FAST")
+    port: int = int(getenv("PORT", "5000"))
+    host: str = getenv("HOST", "127.0.0.1")
+    fast: bool = not getenv("NO_FAST")
 
     app.run(host=host, port=port, fast=fast, access_log=True)
 
